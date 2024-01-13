@@ -50,7 +50,7 @@ fn handle_request(request: HTTPRequest) -> HTTPResponse {
     } else if path == "/user-agent" {
         let ua = String::from("");
         let ua = request.header("User-Agent").unwrap_or(&ua);
-        // let ua = request.header("User-Agent").unwrap_or("");
+
         let mut response = HTTPResponse::on_request(&request, StatusCode::OK);
         response.add_header("Content-Type".to_string(), "text/plain".to_string());
         response.set_content(ua.clone());
