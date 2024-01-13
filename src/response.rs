@@ -128,4 +128,20 @@ mod tests {
             "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n"
         );
     }
+
+    #[test]
+    fn http_response_to_string_with_content() {
+        let response = HTTPResponse {
+            version: HTTPVersion::V1_1,
+            status: StatusCode::OK,
+            headers: vec![ResponseHeader::new(
+                "Content-Type".to_string(),
+                "text/plain".to_string(),
+            )],
+            content: Some("Hello, world!".to_string()),
+        };
+        let response_str = response.try_to_string().unwrap();
+
+        assert_eq!(response_str, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, world!");
+    }
 }
