@@ -13,7 +13,7 @@ impl From<&str> for RequestMethod {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum HTTPVersion {
     V1_1,
     Unidentified,
@@ -42,8 +42,8 @@ impl TryInto<&str> for HTTPVersion {
 #[derive(Debug)]
 pub struct HTTPRequest {
     method: RequestMethod,
-    pub path: String,
-    pub version: HTTPVersion,
+    path: String,
+    version: HTTPVersion,
 }
 
 impl HTTPRequest {
@@ -59,6 +59,14 @@ impl HTTPRequest {
             path,
             version,
         })
+    }
+
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    pub fn version(&self) -> HTTPVersion {
+        self.version
     }
 }
 

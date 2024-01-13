@@ -39,11 +39,17 @@ fn handle_connection(mut stream: TcpStream) {
 }
 
 fn handle_request(request: HTTPRequest) -> HTTPResponse {
-    let status = match request.path.as_str() {
-        "/" => StatusCode::OK,
-        _ => StatusCode::NotFound,
-    };
-    HTTPResponse::new(request.version, status)
+    if request.path() == "/" {
+        HTTPResponse::on_request(&request, StatusCode::OK)
+    } else if request.path().starts_with("/echo/") {
+        let echo = request.path().trim_start_matches("/echo/");
+        let mut response = HTTPResponse::on_request(&request, StatusCode::OK);
+        response.add_header("Content-Type".to_string(), "text/plain".to_string());
+        response.set_content(echo.to_string());
+        response
+    } else {
+        HTTPResponse::on_request(&request, StatusCode::NotFound)
+    }
 }
 
 fn read_data(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
