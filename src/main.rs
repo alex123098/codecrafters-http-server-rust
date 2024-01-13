@@ -1,80 +1,16 @@
-use std::{
-    io::{Read, Write},
-    net::{TcpListener, TcpStream},
-    thread,
-};
+use std::io;
 
-use response::{HTTPResponse, StatusCode};
+use http_server_starter_rust::server::{HTTPResponse, HTTPServer, StatusCode};
 
-use crate::request::HTTPRequest;
+mod handlers;
 
-mod request;
-mod response;
+#[tokio::main]
+async fn main() -> io::Result<()> {
+    let mut server = HTTPServer::new(4221);
 
-fn main() {
-    let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
+    server.map_get("/", |r| HTTPResponse::on_request(&r, StatusCode::OK));
+    server.map_get("/echo/*", handlers::handle_echo);
+    server.map_get("/user-agent", handlers::handle_user_agent);
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                thread::spawn(move || {
-                    handle_connection(stream);
-                });
-            }
-            Err(e) => {
-                println!("error: {}", e);
-            }
-        }
-    }
-}
-
-fn handle_connection(mut stream: TcpStream) {
-    println!("accepted new connection");
-
-    let payload_bytes = read_data(&mut stream).unwrap();
-    let payload = String::from_utf8_lossy(&payload_bytes);
-    let request = HTTPRequest::parse(&payload).unwrap();
-    println!("received request: {:?}", &request);
-    let response = handle_request(request);
-    println!("sending response: {:?}", &response);
-
-    stream
-        .write_all(response.try_to_string().unwrap().as_bytes())
-        .unwrap();
-}
-
-fn handle_request(request: HTTPRequest) -> HTTPResponse {
-    let path = request.path();
-    if path == "/" {
-        HTTPResponse::on_request(&request, StatusCode::OK)
-    } else if path == "/user-agent" {
-        let ua = String::from("");
-        let ua = request.header("User-Agent").unwrap_or(&ua);
-
-        let mut response = HTTPResponse::on_request(&request, StatusCode::OK);
-        response.add_header("Content-Type".to_string(), "text/plain".to_string());
-        response.set_content(ua.clone());
-        response
-    } else if path.starts_with("/echo/") {
-        let echo = request.path().trim_start_matches("/echo/");
-        let mut response = HTTPResponse::on_request(&request, StatusCode::OK);
-        response.add_header("Content-Type".to_string(), "text/plain".to_string());
-        response.set_content(echo.to_string());
-        response
-    } else {
-        HTTPResponse::on_request(&request, StatusCode::NotFound)
-    }
-}
-
-fn read_data(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
-    let mut buffer = [0u8; 1024];
-    let mut payload = Vec::new();
-    loop {
-        let bytes_read = stream.read(&mut buffer)?;
-        payload.extend_from_slice(&buffer[..bytes_read]);
-        if bytes_read < buffer.len() {
-            break;
-        }
-    }
-    Ok(payload)
+    server.start().await
 }

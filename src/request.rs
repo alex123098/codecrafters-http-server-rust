@@ -1,19 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(PartialEq, Debug)]
-pub enum RequestMethod {
-    GET,
-    Unidentified,
-}
-
-impl From<&str> for RequestMethod {
-    fn from(s: &str) -> Self {
-        match s {
-            "GET" => RequestMethod::GET,
-            _ => RequestMethod::Unidentified,
-        }
-    }
-}
+use crate::RequestMethod;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum HTTPVersion {
@@ -85,8 +72,12 @@ impl HTTPRequest {
         self.version
     }
 
-    pub fn header(&self, name: &str) -> Option<&String> {
-        self.headers.get(&name.to_string())
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers.get(&name.to_string()).map(|v| v.as_str())
+    }
+
+    pub fn method(&self) -> RequestMethod {
+        self.method
     }
 }
 

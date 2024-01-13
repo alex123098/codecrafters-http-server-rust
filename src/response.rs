@@ -84,7 +84,7 @@ impl HTTPResponse {
         headers
     }
 
-    pub fn set_content(&mut self, content: String) {
+    pub fn set_body(&mut self, content: String) {
         self.content = Some(content);
     }
 
