@@ -39,9 +39,18 @@ fn handle_connection(mut stream: TcpStream) {
 }
 
 fn handle_request(request: HTTPRequest) -> HTTPResponse {
-    if request.path() == "/" {
+    let path = request.path();
+    if path == "/" {
         HTTPResponse::on_request(&request, StatusCode::OK)
-    } else if request.path().starts_with("/echo/") {
+    } else if path == "/user-agent" {
+        let ua = String::from("");
+        let ua = request.header("User-Agent").unwrap_or(&ua);
+        // let ua = request.header("User-Agent").unwrap_or("");
+        let mut response = HTTPResponse::on_request(&request, StatusCode::OK);
+        response.add_header("Content-Type".to_string(), "text/plain".to_string());
+        response.set_content(ua.clone());
+        response
+    } else if path.starts_with("/echo/") {
         let echo = request.path().trim_start_matches("/echo/");
         let mut response = HTTPResponse::on_request(&request, StatusCode::OK);
         response.add_header("Content-Type".to_string(), "text/plain".to_string());

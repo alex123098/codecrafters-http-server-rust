@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(PartialEq, Debug)]
 pub enum RequestMethod {
     GET,
@@ -44,6 +46,7 @@ pub struct HTTPRequest {
     method: RequestMethod,
     path: String,
     version: HTTPVersion,
+    headers: HashMap<String, String>,
 }
 
 impl HTTPRequest {
@@ -54,10 +57,23 @@ impl HTTPRequest {
         let method = request_def.next()?.into();
         let path = request_def.next()?.to_string();
         let version = request_def.next()?.into();
+        let mut headers = HashMap::new();
+
+        while let Some(line) = lines.next() {
+            if line.is_empty() {
+                break;
+            }
+            let mut header_pair = line.splitn(2, ": ");
+            if let (Some(name), Some(value)) = (header_pair.next(), header_pair.next()) {
+                headers.insert(name.to_string(), value.to_string());
+            }
+        }
+
         Some(HTTPRequest {
             method,
             path,
             version,
+            headers,
         })
     }
 
@@ -67,6 +83,10 @@ impl HTTPRequest {
 
     pub fn version(&self) -> HTTPVersion {
         self.version
+    }
+
+    pub fn header(&self, name: &str) -> Option<&String> {
+        self.headers.get(&name.to_string())
     }
 }
 
@@ -84,5 +104,16 @@ User-Agent: test-ua/1.0.0
         assert_eq!(req.method, RequestMethod::GET);
         assert_eq!(req.path, "/resource.txt");
         assert_eq!(req.version, HTTPVersion::V1_1);
+    }
+
+    #[test]
+    fn can_parse_headers() {
+        let payload = "GET /resource.txt HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: test-ua/1.0.0\r\n\r\n";
+        let req = HTTPRequest::parse(payload).unwrap();
+
+        let host = req.header("Host").unwrap();
+        assert_eq!(host, "localhost:4221");
+        let ua = req.header("User-Agent").unwrap();
+        assert_eq!(ua, "test-ua/1.0.0");
     }
 }
