@@ -1,6 +1,7 @@
 use std::{
     io::{Read, Write},
     net::{TcpListener, TcpStream},
+    thread,
 };
 
 use response::{HTTPResponse, StatusCode};
@@ -15,7 +16,11 @@ fn main() {
 
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => handle_connection(stream),
+            Ok(stream) => {
+                thread::spawn(move || {
+                    handle_connection(stream);
+                });
+            }
             Err(e) => {
                 println!("error: {}", e);
             }
