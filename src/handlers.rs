@@ -5,6 +5,7 @@ use http_server_starter_rust::server::{HTTPHandler, HTTPRequest, HTTPResponse, S
 pub fn handle_echo(request: &HTTPRequest) -> HTTPResponse {
     let payload = request.path().trim_start_matches("/echo/");
     let mut response = HTTPResponse::on_request(&request, StatusCode::OK);
+    response.add_header("Content-Type".to_string(), "text/plain".to_string());
     response.set_body(payload.to_string());
     response
 }
