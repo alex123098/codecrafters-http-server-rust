@@ -16,8 +16,8 @@ async fn main() -> io::Result<()> {
     );
     server.map_get_fn("/echo/*", Box::new(handlers::handle_echo));
     server.map_get_fn("/user-agent", Box::new(handlers::handle_user_agent));
-    // let reader = FileReader::new(base_dir.as_str());
-    // server.map_get("/files/*", |r| reader.handle(r));
+    let reader = FileReader::new(base_dir);
+    server.map_get("/files/*", Box::new(reader));
 
     server.start().await
 }

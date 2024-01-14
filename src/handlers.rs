@@ -17,20 +17,20 @@ pub fn handle_user_agent(request: &HTTPRequest) -> HTTPResponse {
     response
 }
 
-pub struct FileReader<'a> {
-    base_dir: &'a str,
+pub struct FileReader {
+    base_dir: String,
 }
 
-impl<'a> FileReader<'a> {
-    pub fn new(base_dir: &str) -> FileReader {
+impl FileReader {
+    pub fn new(base_dir: String) -> FileReader {
         FileReader { base_dir }
     }
 }
 
-impl HTTPHandler for FileReader<'_> {
+impl HTTPHandler for FileReader {
     fn handle(&self, req: &HTTPRequest) -> HTTPResponse {
         let fname = req.path().trim_start_matches("/files/");
-        let fpath = Path::new(self.base_dir).join(fname);
+        let fpath = Path::new(self.base_dir.as_str()).join(fname);
         if let Ok(content) = fs::read_to_string(&fpath) {
             let mut response = HTTPResponse::on_request(req, StatusCode::OK);
             response.add_header(

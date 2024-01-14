@@ -47,7 +47,7 @@ impl Router {
     pub fn handle_request(&self, request: HTTPRequest) -> HTTPResponse {
         let routes = match self.handlers.read() {
             Ok(r) => r,
-            Err(e) => {
+            Err(_) => {
                 return HTTPResponse::on_request(&request, StatusCode::OK);
             }
         };

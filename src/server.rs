@@ -62,6 +62,10 @@ impl HTTPServer {
             }),
         );
     }
+
+    pub fn map_get(&mut self, path: &str, handler: Box<dyn HTTPHandler>) {
+        self.router.add_route(RequestMethod::GET, path, handler);
+    }
 }
 
 async fn serve(router: router::Router, mut stream: TcpStream) -> io::Result<()> {
