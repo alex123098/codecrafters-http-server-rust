@@ -1,34 +1,37 @@
-use crate::request;
-use crate::response;
+use std::sync::Arc;
+use std::sync::RwLock;
+
+use super::{HTTPRequest, HTTPResponse, StatusCode};
 use crate::RequestMethod;
 
-#[derive(Debug, Eq, PartialEq, Hash, Clone)]
-struct HandlerDef {
+struct Route {
     method: RequestMethod,
     path: String,
-    handler: Box<HTTPHandler>,
+    handler: Box<dyn HTTPHandler>,
 }
 
-pub type HTTPHandler = fn(&request::HTTPRequest) -> response::HTTPResponse;
+pub trait HTTPHandler: Send + Sync {
+    fn handle(&self, req: &HTTPRequest) -> HTTPResponse;
+}
 
 #[derive(Clone)]
 pub struct Router {
-    handlers: Vec<HandlerDef>,
+    handlers: Arc<RwLock<Vec<Route>>>,
 }
 
 impl Router {
     pub fn new() -> Self {
         Router {
-            handlers: Vec::new(),
+            handlers: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
-    pub fn add_route(&mut self, method: RequestMethod, path: &str, handler: HTTPHandler) {
+    pub fn add_route(&mut self, method: RequestMethod, path: &str, handler: Box<dyn HTTPHandler>) {
         let normalized_path = Self::normalize_path(path);
-        self.handlers.push(HandlerDef {
+        self.handlers.write().unwrap().push(Route {
             method,
             path: normalized_path,
-            handler: Box::new(handler),
+            handler,
         });
     }
 
@@ -41,20 +44,24 @@ impl Router {
         normalized
     }
 
-    pub fn handle_request(&self, request: request::HTTPRequest) -> response::HTTPResponse {
-        let handler = self
-            .handlers
+    pub fn handle_request(&self, request: HTTPRequest) -> HTTPResponse {
+        let routes = match self.handlers.read() {
+            Ok(r) => r,
+            Err(e) => {
+                return HTTPResponse::on_request(&request, StatusCode::OK);
+            }
+        };
+        let route = routes
             .iter()
             .filter(|h| {
                 h.method == request.method() && path_matches(request.path(), h.path.as_str())
             })
-            .map(|h| h.handler.clone())
             .next();
 
-        if let Some(handler) = handler {
-            handler(&request)
+        if let Some(route) = route {
+            route.handler.handle(&request)
         } else {
-            response::HTTPResponse::on_request(&request, response::StatusCode::NotFound)
+            HTTPResponse::on_request(&request, StatusCode::NotFound)
         }
     }
 }

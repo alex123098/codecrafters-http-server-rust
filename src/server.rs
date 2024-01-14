@@ -1,15 +1,23 @@
 use std::io;
-
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 pub use crate::request::HTTPRequest;
 pub use crate::response::{HTTPResponse, StatusCode};
 use crate::RequestMethod;
+pub use router::HTTPHandler;
 
 mod router;
 
-pub use router::HTTPHandler;
+struct FuncHTTPHandler {
+    handler_fn: Box<dyn Fn(&HTTPRequest) -> HTTPResponse + Send + Sync + 'static>,
+}
+
+impl HTTPHandler for FuncHTTPHandler {
+    fn handle(&self, req: &HTTPRequest) -> HTTPResponse {
+        (self.handler_fn)(req)
+    }
+}
 
 pub struct HTTPServer {
     port: u16,
@@ -45,12 +53,14 @@ impl HTTPServer {
         }
     }
 
-    pub fn map_get(&mut self, path: &str, handler: HTTPHandler) {
-        self.router.add_route(RequestMethod::GET, path, handler);
-    }
-
-    pub fn map_post(&mut self, path: &str, handler: HTTPHandler) {
-        self.router.add_route(RequestMethod::POST, path, handler);
+    pub fn map_get_fn(&mut self, path: &str, handler: Box<fn(&HTTPRequest) -> HTTPResponse>) {
+        self.router.add_route(
+            RequestMethod::GET,
+            path,
+            Box::new(FuncHTTPHandler {
+                handler_fn: handler,
+            }),
+        );
     }
 }
 
