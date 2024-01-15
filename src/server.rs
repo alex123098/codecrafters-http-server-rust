@@ -1,10 +1,14 @@
-use std::io;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
+use anyhow::{Error, Result};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt, BufReader},
+    net::TcpListener,
+};
 
-pub use crate::request::HTTPRequest;
-pub use crate::response::{HTTPResponse, StatusCode};
 use crate::RequestMethod;
+pub use crate::{
+    request::HTTPRequest,
+    response::{HTTPResponse, StatusCode},
+};
 pub use router::HTTPHandler;
 
 mod router;
@@ -32,7 +36,7 @@ impl HTTPServer {
         }
     }
 
-    pub async fn start(&self) -> io::Result<()> {
+    pub async fn start(&self) -> Result<()> {
         let addr = format!("0.0.0.0:{}", self.port);
         let listener = TcpListener::bind(addr).await?;
 
@@ -66,44 +70,31 @@ impl HTTPServer {
     pub fn map_get(&mut self, path: &str, handler: Box<dyn HTTPHandler>) {
         self.router.add_route(RequestMethod::GET, path, handler);
     }
-}
 
-async fn serve(router: router::Router, mut stream: TcpStream) -> io::Result<()> {
-    let req_bytes = read_request(&mut stream).await?;
-    let req_str = String::from_utf8_lossy(&req_bytes);
-    if let Some(request) = HTTPRequest::parse(&req_str) {
-        let response = router.handle_request(request);
-        write_response(&mut stream, response).await?;
-        Ok(())
-    } else {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Unable to parse request",
-        ))
+    pub fn map_post(&mut self, path: &str, handler: Box<dyn HTTPHandler>) {
+        self.router.add_route(RequestMethod::POST, path, handler);
     }
 }
 
-async fn read_request(stream: &mut TcpStream) -> io::Result<Vec<u8>> {
-    let mut buffer = [0u8; 1024];
-    let mut payload = Vec::new();
-    loop {
-        let bytes_read = stream.read(&mut buffer).await?;
-        payload.extend_from_slice(&buffer[..bytes_read]);
-        if bytes_read < buffer.len() {
-            break;
-        }
-    }
-    Ok(payload)
+async fn serve<TStream: AsyncReadExt + AsyncWriteExt + Unpin>(
+    router: router::Router,
+    mut stream: TStream,
+) -> Result<()> {
+    let mut reader = BufReader::new(&mut stream);
+    let request = HTTPRequest::parse(&mut reader).await?;
+    let response = router.handle_request(request);
+    write_response(&mut stream, response).await?;
+    Ok(())
 }
 
-async fn write_response(stream: &mut TcpStream, response: HTTPResponse) -> io::Result<()> {
+async fn write_response<TStream: AsyncWriteExt + Unpin>(
+    stream: &mut TStream,
+    response: HTTPResponse,
+) -> Result<()> {
     if let Ok(response_str) = response.try_to_string() {
         stream.write_all(response_str.as_bytes()).await?;
         Ok(())
     } else {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Unable to serialize response",
-        ))
+        Err(Error::msg("Unable to serialize response"))
     }
 }

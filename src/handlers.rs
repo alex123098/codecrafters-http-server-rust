@@ -45,3 +45,21 @@ impl HTTPHandler for FileReader {
         }
     }
 }
+
+pub struct FileWriter {
+    base_dir: String,
+}
+
+impl FileWriter {
+    pub fn new(base_dir: String) -> FileWriter {
+        FileWriter { base_dir }
+    }
+}
+
+impl HTTPHandler for FileWriter {
+    fn handle(&self, req: &HTTPRequest) -> HTTPResponse {
+        let fname = req.path().trim_start_matches("/files/");
+        let fpath = Path::new(self.base_dir.as_str()).join(fname);
+        HTTPResponse::on_request(req, StatusCode::Created)
+    }
+}

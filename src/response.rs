@@ -3,6 +3,7 @@ use crate::request::{HTTPRequest, HTTPVersion};
 #[derive(PartialEq, Debug)]
 pub enum StatusCode {
     OK,
+    Created,
     NotFound,
     Unidentified,
 }
@@ -11,6 +12,7 @@ impl From<&str> for StatusCode {
     fn from(s: &str) -> Self {
         match s {
             "200" => StatusCode::OK,
+            "201" => StatusCode::Created,
             "404" => StatusCode::NotFound,
             _ => StatusCode::Unidentified,
         }
@@ -22,6 +24,7 @@ impl TryInto<&str> for StatusCode {
     fn try_into(self) -> Result<&'static str, Self::Error> {
         match self {
             StatusCode::OK => Ok("200 OK"),
+            StatusCode::Created => Ok("201 Created"),
             StatusCode::NotFound => Ok("404 Not Found"),
             StatusCode::Unidentified => Err("Unknown status code"),
         }
