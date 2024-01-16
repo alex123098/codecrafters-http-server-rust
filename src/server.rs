@@ -96,7 +96,7 @@ async fn write_response<TStream: AsyncWriteExt + Unpin>(
     stream: &mut TStream,
     response: HTTPResponse,
 ) -> Result<()> {
-    if let Ok(response_str) = response.try_to_string() {
+    if let Ok(response_str) = TryInto::<String>::try_into(response) {
         stream.write_all(response_str.as_bytes()).await?;
         Ok(())
     } else {

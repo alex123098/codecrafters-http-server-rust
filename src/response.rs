@@ -59,16 +59,44 @@ pub struct HTTPResponse {
 }
 
 impl HTTPResponse {
-    pub fn on_request(request: &HTTPRequest, status: StatusCode) -> Self {
+    pub fn on_request(request: &HTTPRequest) -> Self {
         HTTPResponse {
             version: request.version(),
-            status,
+            status: StatusCode::Unidentified,
             headers: Vec::new(),
             content: None,
         }
     }
 
-    pub fn try_to_string(self) -> Result<String> {
+    fn create_headers_section(&self) -> String {
+        let mut headers = String::new();
+        for header in self.headers.iter() {
+            headers.push_str(&format!("{}: {}\r\n", header.name, header.value));
+        }
+        headers
+    }
+
+    pub fn set_status(mut self, status: StatusCode) -> HTTPResponse {
+        self.status = status;
+        self
+    }
+
+    pub fn set_body(mut self, content: String) -> Self {
+        self.content = Some(content);
+        self
+    }
+
+    pub fn add_header(mut self, name: &str, value: &str) -> Self {
+        self.headers
+            .push(ResponseHeader::new(name.to_owned(), value.to_owned()));
+        self
+    }
+}
+
+impl TryInto<String> for HTTPResponse {
+    type Error = Error;
+
+    fn try_into(self) -> Result<String> {
         let headers_str = self.create_headers_section();
         let version: &str = self.version.try_into()?;
         let status: &str = self.status.try_into()?;
@@ -85,23 +113,6 @@ impl HTTPResponse {
         }
         Ok(result)
     }
-
-    fn create_headers_section(&self) -> String {
-        let mut headers = String::new();
-        for header in self.headers.iter() {
-            headers.push_str(&format!("{}: {}\r\n", header.name, header.value));
-        }
-        headers
-    }
-
-    pub fn set_body(&mut self, content: String) {
-        self.content = Some(content);
-    }
-
-    pub fn add_header(&mut self, name: &str, value: &str) {
-        self.headers
-            .push(ResponseHeader::new(name.to_owned(), value.to_owned()))
-    }
 }
 
 #[cfg(test)]
@@ -116,7 +127,7 @@ mod tests {
             headers: Vec::new(),
             content: None,
         };
-        let response_str = response.try_to_string().unwrap();
+        let response_str: String = response.try_into().unwrap();
 
         assert_eq!(response_str, "HTTP/1.1 200 OK\r\n\r\n");
     }
@@ -132,7 +143,7 @@ mod tests {
             )],
             content: None,
         };
-        let response_str = response.try_to_string().unwrap();
+        let response_str: String = response.try_into().unwrap();
 
         assert_eq!(
             response_str,
@@ -151,7 +162,7 @@ mod tests {
             )],
             content: Some("Hello, world!".to_string()),
         };
-        let response_str = response.try_to_string().unwrap();
+        let response_str: String = response.try_into().unwrap();
 
         assert_eq!(response_str, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, world!");
     }

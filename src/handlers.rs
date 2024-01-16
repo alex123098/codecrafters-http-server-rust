@@ -9,18 +9,18 @@ use http_server_starter_rust::server::{HTTPHandler, HTTPRequest, HTTPResponse, S
 
 pub fn handle_echo(request: &HTTPRequest) -> Result<HTTPResponse> {
     let payload = request.path().trim_start_matches("/echo/");
-    let mut response = HTTPResponse::on_request(&request, StatusCode::OK);
-    response.add_header("Content-Type", "text/plain");
-    response.set_body(payload.to_string());
-    Ok(response)
+    Ok(HTTPResponse::on_request(&request)
+        .set_status(StatusCode::OK)
+        .add_header("Content-Type", "text/plain")
+        .set_body(payload.to_string()))
 }
 
 pub fn handle_user_agent(request: &HTTPRequest) -> Result<HTTPResponse> {
     let ua = request.header("User-Agent").unwrap_or("");
-    let mut response = HTTPResponse::on_request(&request, StatusCode::OK);
-    response.add_header("Content-Type", "text/plain");
-    response.set_body(ua.to_string());
-    Ok(response)
+    Ok(HTTPResponse::on_request(request)
+        .set_status(StatusCode::OK)
+        .add_header("Content-Type", "text/plain")
+        .set_body(ua.to_owned()))
 }
 
 pub struct FileReader {
@@ -38,12 +38,12 @@ impl HTTPHandler for FileReader {
         let fname = req.path().trim_start_matches("/files/");
         let fpath = Path::new(self.base_dir.as_str()).join(fname);
         if let Ok(content) = fs::read_to_string(&fpath) {
-            let mut response = HTTPResponse::on_request(req, StatusCode::OK);
-            response.add_header("Content-Type", "application/octet-stream");
-            response.set_body(content);
-            Ok(response)
+            Ok(HTTPResponse::on_request(req)
+                .set_status(StatusCode::OK)
+                .add_header("Content-Type", "application/octet-stream")
+                .set_body(content))
         } else {
-            Ok(HTTPResponse::on_request(req, StatusCode::NotFound))
+            Ok(HTTPResponse::on_request(req).set_status(StatusCode::NotFound))
         }
     }
 }
@@ -67,9 +67,9 @@ impl HTTPHandler for FileWriter {
                 let mut file = File::create(&fpath)?;
                 file.write_all(body)?;
                 file.flush()?;
-                Ok(HTTPResponse::on_request(&req, StatusCode::Created))
+                Ok(HTTPResponse::on_request(req).set_status(StatusCode::Created))
             }
-            None => Ok(HTTPResponse::on_request(&req, StatusCode::BadRequest)),
+            None => Ok(HTTPResponse::on_request(&req).set_status(StatusCode::BadRequest)),
         }
     }
 }

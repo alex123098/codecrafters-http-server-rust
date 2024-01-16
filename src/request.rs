@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Error, Result};
 use std::collections::HashMap;
-
 use tokio::io::{AsyncBufReadExt, AsyncReadExt};
 
 use crate::RequestMethod;
@@ -48,15 +47,15 @@ impl HTTPRequest {
         let mut request_def = first_line.split_whitespace();
         let method = request_def
             .next()
-            .ok_or(Error::msg("Unknown HTTP Method"))?
+            .ok_or(anyhow!("Unknown HTTP Method"))?
             .into();
         let path = request_def
             .next()
-            .ok_or(Error::msg("Request prelude is incomplete: missing path"))?
+            .ok_or(anyhow!("Request prelude is incomplete: missing path"))?
             .to_string();
         let version = request_def
             .next()
-            .ok_or(Error::msg("Unsupported protocol"))?
+            .ok_or(anyhow!("Unsupported protocol"))?
             .into();
         // parse headers
         let mut headers: HashMap<String, String> = HashMap::new();

@@ -1,9 +1,10 @@
 use anyhow::Result;
-use std::sync::Arc;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
-use super::{HTTPRequest, HTTPResponse, StatusCode};
-use crate::RequestMethod;
+use crate::{
+    server::{HTTPRequest, HTTPResponse, StatusCode},
+    RequestMethod,
+};
 
 struct Route {
     method: RequestMethod,
@@ -49,7 +50,8 @@ impl Router {
         let routes = match self.handlers.read() {
             Ok(r) => r,
             Err(_) => {
-                return HTTPResponse::on_request(&request, StatusCode::InternalServerError);
+                return HTTPResponse::on_request(&request)
+                    .set_status(StatusCode::InternalServerError);
             }
         };
         let route = routes
@@ -61,13 +63,13 @@ impl Router {
 
         if let Some(route) = route {
             route.handler.handle(&request).unwrap_or_else(|e| {
-                let mut resp = HTTPResponse::on_request(&request, StatusCode::InternalServerError);
-                resp.add_header("Content-Type", "text/plain");
-                resp.set_body(format!("{e}"));
-                resp
+                HTTPResponse::on_request(&request)
+                    .set_status(StatusCode::InternalServerError)
+                    .add_header("Content-Type", "text/plain")
+                    .set_body(format!("{e}"))
             })
         } else {
-            HTTPResponse::on_request(&request, StatusCode::NotFound)
+            HTTPResponse::on_request(&request).set_status(StatusCode::NotFound)
         }
     }
 }
