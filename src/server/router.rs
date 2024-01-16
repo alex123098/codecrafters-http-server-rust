@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -11,7 +12,7 @@ struct Route {
 }
 
 pub trait HTTPHandler: Send + Sync {
-    fn handle(&self, req: &HTTPRequest) -> HTTPResponse;
+    fn handle(&self, req: &HTTPRequest) -> Result<HTTPResponse>;
 }
 
 #[derive(Clone)]
@@ -48,7 +49,7 @@ impl Router {
         let routes = match self.handlers.read() {
             Ok(r) => r,
             Err(_) => {
-                return HTTPResponse::on_request(&request, StatusCode::OK);
+                return HTTPResponse::on_request(&request, StatusCode::InternalServerError);
             }
         };
         let route = routes
@@ -59,7 +60,12 @@ impl Router {
             .next();
 
         if let Some(route) = route {
-            route.handler.handle(&request)
+            route.handler.handle(&request).unwrap_or_else(|e| {
+                let mut resp = HTTPResponse::on_request(&request, StatusCode::InternalServerError);
+                resp.add_header("Content-Type", "text/plain");
+                resp.set_body(format!("{e}"));
+                resp
+            })
         } else {
             HTTPResponse::on_request(&request, StatusCode::NotFound)
         }

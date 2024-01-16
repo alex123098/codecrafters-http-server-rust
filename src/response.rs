@@ -1,10 +1,13 @@
 use crate::request::{HTTPRequest, HTTPVersion};
+use anyhow::{anyhow, Error, Result};
 
 #[derive(PartialEq, Debug)]
 pub enum StatusCode {
     OK,
     Created,
     NotFound,
+    BadRequest,
+    InternalServerError,
     Unidentified,
 }
 
@@ -14,19 +17,23 @@ impl From<&str> for StatusCode {
             "200" => StatusCode::OK,
             "201" => StatusCode::Created,
             "404" => StatusCode::NotFound,
+            "400" => StatusCode::BadRequest,
+            "500" => StatusCode::InternalServerError,
             _ => StatusCode::Unidentified,
         }
     }
 }
 
 impl TryInto<&str> for StatusCode {
-    type Error = &'static str;
-    fn try_into(self) -> Result<&'static str, Self::Error> {
+    type Error = Error;
+    fn try_into(self) -> Result<&'static str> {
         match self {
             StatusCode::OK => Ok("200 OK"),
             StatusCode::Created => Ok("201 Created"),
             StatusCode::NotFound => Ok("404 Not Found"),
-            StatusCode::Unidentified => Err("Unknown status code"),
+            StatusCode::BadRequest => Ok("400 Bad Request"),
+            StatusCode::InternalServerError => Ok("500 Internal Server Error"),
+            StatusCode::Unidentified => Err(anyhow!("Unknown status code")),
         }
     }
 }
@@ -61,7 +68,7 @@ impl HTTPResponse {
         }
     }
 
-    pub fn try_to_string(self) -> Result<String, &'static str> {
+    pub fn try_to_string(self) -> Result<String> {
         let headers_str = self.create_headers_section();
         let version: &str = self.version.try_into()?;
         let status: &str = self.status.try_into()?;
@@ -91,8 +98,9 @@ impl HTTPResponse {
         self.content = Some(content);
     }
 
-    pub fn add_header(&mut self, name: String, value: String) {
-        self.headers.push(ResponseHeader::new(name, value))
+    pub fn add_header(&mut self, name: &str, value: &str) {
+        self.headers
+            .push(ResponseHeader::new(name.to_owned(), value.to_owned()))
     }
 }
 

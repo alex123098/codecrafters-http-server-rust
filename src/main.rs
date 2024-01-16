@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
 
     server.map_get_fn(
         "/",
-        Box::new(|r| HTTPResponse::on_request(&r, StatusCode::OK)),
+        Box::new(|r| Ok(HTTPResponse::on_request(&r, StatusCode::OK))),
     );
     server.map_get_fn("/echo/*", Box::new(handlers::handle_echo));
     server.map_get_fn("/user-agent", Box::new(handlers::handle_user_agent));

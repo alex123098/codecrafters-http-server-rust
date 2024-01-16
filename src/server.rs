@@ -14,11 +14,11 @@ pub use router::HTTPHandler;
 mod router;
 
 struct FuncHTTPHandler {
-    handler_fn: Box<dyn Fn(&HTTPRequest) -> HTTPResponse + Send + Sync + 'static>,
+    handler_fn: Box<dyn Fn(&HTTPRequest) -> Result<HTTPResponse> + Send + Sync + 'static>,
 }
 
 impl HTTPHandler for FuncHTTPHandler {
-    fn handle(&self, req: &HTTPRequest) -> HTTPResponse {
+    fn handle(&self, req: &HTTPRequest) -> Result<HTTPResponse> {
         (self.handler_fn)(req)
     }
 }
@@ -57,7 +57,11 @@ impl HTTPServer {
         }
     }
 
-    pub fn map_get_fn(&mut self, path: &str, handler: Box<fn(&HTTPRequest) -> HTTPResponse>) {
+    pub fn map_get_fn(
+        &mut self,
+        path: &str,
+        handler: Box<fn(&HTTPRequest) -> Result<HTTPResponse>>,
+    ) {
         self.router.add_route(
             RequestMethod::GET,
             path,
@@ -82,6 +86,7 @@ async fn serve<TStream: AsyncReadExt + AsyncWriteExt + Unpin>(
 ) -> Result<()> {
     let mut reader = BufReader::new(&mut stream);
     let request = HTTPRequest::parse(&mut reader).await?;
+    dbg!(&request);
     let response = router.handle_request(request);
     write_response(&mut stream, response).await?;
     Ok(())

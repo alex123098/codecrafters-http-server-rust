@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use std::collections::HashMap;
 
 use tokio::io::{AsyncBufReadExt, AsyncReadExt};
@@ -21,12 +21,12 @@ impl From<&str> for HTTPVersion {
 }
 
 impl TryInto<&str> for HTTPVersion {
-    type Error = &'static str;
+    type Error = Error;
 
-    fn try_into(self) -> Result<&'static str, Self::Error> {
+    fn try_into(self) -> Result<&'static str> {
         match self {
             HTTPVersion::V1_1 => Ok("HTTP/1.1"),
-            HTTPVersion::Unidentified => Err("Unknown HTTP version"),
+            HTTPVersion::Unidentified => Err(anyhow!("Unknown HTTP version")),
         }
     }
 }
@@ -103,6 +103,10 @@ impl HTTPRequest {
 
     pub fn method(&self) -> RequestMethod {
         self.method
+    }
+
+    pub fn body(&self) -> Option<&[u8]> {
+        self.body.as_ref().map(|b| b.as_slice())
     }
 }
 
