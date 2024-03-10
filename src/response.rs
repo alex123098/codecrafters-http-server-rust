@@ -102,7 +102,7 @@ impl TryInto<String> for HTTPResponse {
         let status: &str = self.status.try_into()?;
         let mut result = String::new();
         result.push_str(&format!("{} {}\r\n", version, status));
-        if headers_str.len() > 0 {
+        if !headers_str.is_empty() {
             result.push_str(&headers_str);
             let length = self.content.as_ref().map_or(0, |c| c.len());
             result.push_str(&format!("Content-Length: {}\r\n", length));

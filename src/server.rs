@@ -13,8 +13,10 @@ pub use router::HTTPHandler;
 
 mod router;
 
+type SendableHTTPHandlerFn = dyn Fn(&HTTPRequest) -> Result<HTTPResponse> + Send + Sync + 'static;
+
 struct FuncHTTPHandler {
-    handler_fn: Box<dyn Fn(&HTTPRequest) -> Result<HTTPResponse> + Send + Sync + 'static>,
+    handler_fn: Box<SendableHTTPHandlerFn>,
 }
 
 impl HTTPHandler for FuncHTTPHandler {
@@ -31,7 +33,7 @@ pub struct HTTPServer {
 impl HTTPServer {
     pub fn new(port: u16) -> HTTPServer {
         HTTPServer {
-            port: port,
+            port,
             router: router::Router::new(),
         }
     }

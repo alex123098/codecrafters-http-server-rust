@@ -9,7 +9,7 @@ use http_server_starter_rust::server::{HTTPHandler, HTTPRequest, HTTPResponse, S
 
 pub fn handle_echo(request: &HTTPRequest) -> Result<HTTPResponse> {
     let payload = request.path().trim_start_matches("/echo/");
-    Ok(HTTPResponse::on_request(&request)
+    Ok(HTTPResponse::on_request(request)
         .set_status(StatusCode::OK)
         .add_header("Content-Type", "text/plain")
         .set_body(payload.to_string()))
@@ -37,7 +37,7 @@ impl HTTPHandler for FileReader {
     fn handle(&self, req: &HTTPRequest) -> Result<HTTPResponse> {
         let fname = req.path().trim_start_matches("/files/");
         let fpath = Path::new(self.base_dir.as_str()).join(fname);
-        if let Ok(content) = fs::read_to_string(&fpath) {
+        if let Ok(content) = fs::read_to_string(fpath) {
             Ok(HTTPResponse::on_request(req)
                 .set_status(StatusCode::OK)
                 .add_header("Content-Type", "application/octet-stream")
@@ -64,12 +64,12 @@ impl HTTPHandler for FileWriter {
         let fpath = Path::new(self.base_dir.as_str()).join(fname);
         match req.body() {
             Some(body) => {
-                let mut file = File::create(&fpath)?;
+                let mut file = File::create(fpath)?;
                 file.write_all(body)?;
                 file.flush()?;
                 Ok(HTTPResponse::on_request(req).set_status(StatusCode::Created))
             }
-            None => Ok(HTTPResponse::on_request(&req).set_status(StatusCode::BadRequest)),
+            None => Ok(HTTPResponse::on_request(req).set_status(StatusCode::BadRequest)),
         }
     }
 }

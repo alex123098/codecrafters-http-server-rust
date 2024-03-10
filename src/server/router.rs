@@ -54,12 +54,9 @@ impl Router {
                     .set_status(StatusCode::InternalServerError);
             }
         };
-        let route = routes
-            .iter()
-            .filter(|h| {
-                h.method == request.method() && path_matches(request.path(), h.path.as_str())
-            })
-            .next();
+        let route = routes.iter().find(|h| {
+            h.method == request.method() && path_matches(request.path(), h.path.as_str())
+        });
 
         if let Some(route) = route {
             route.handler.handle(&request).unwrap_or_else(|e| {
